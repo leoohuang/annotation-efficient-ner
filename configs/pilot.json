@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "purpose": "single-seed feasibility pilot; not the final five-seed benchmark",
+  "models": {
+    "bert": {
+      "id": "google-bert/bert-base-uncased",
+      "revision": "86b5e0934494bd15c9632b12f734a8a67f723594"
+    },
+    "roberta": {
+      "id": "FacebookAI/roberta-base",
+      "revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b"
+    },
+    "modernbert": {
+      "id": "answerdotai/ModernBERT-base",
+      "revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8"
+    }
+  },
+  "seed": 42,
+  "epochs": 5,
+  "batch_size": 16,
+  "encoder_lr": 2e-05,
+  "head_lr": 0.001,
+  "weight_decay": 0.01,
+  "warmup_fraction": 0.1,
+  "gradient_clip": 1.0,
+  "dropout": 0.1,
+  "span_width_embedding": 16,
+  "head_hidden_size": 256,
+  "none_loss_weight": 0.2,
+  "max_subtokens": 64,
+  "device": "mps",
+  "attention": "eager",
+  "precision": "float32",
+  "train_file": "data/processed/train.jsonl",
+  "validation_file": "data/processed/validation.jsonl",
+  "checkpoint_policy": "best validation entity micro-F1; ties retain earliest epoch",
+  "selection_rule": "highest best validation micro-F1; models within 0.01 absolute F1 of the highest are tied and choose shortest total training+validation time; exclude failed/non-finite runs",
+  "test_policy": "test split is never opened by the pilot"
+}

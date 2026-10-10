@@ -1,0 +1,4 @@
+# Tested local versions. Install a PyTorch build appropriate for your device.
+torch==2.14.0
+transformers==4.57.1
+psutil==7.1.0
