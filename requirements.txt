@@ -1,0 +1,11 @@
+torch>=2.3
+transformers>=4.48
+seqeval==1.2.2
+scikit-learn
+numpy
+scipy
+pandas
+matplotlib
+pyyaml
+tqdm
+pytest
