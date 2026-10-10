@@ -1,0 +1,15 @@
+__pycache__/
+.venv/
+checkpoints/
+runs/
+data/raw/
+data/processed/*.jsonl
+reports/
+.DS_Store
+.env
+.env.*
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+.cache/
