@@ -4,7 +4,7 @@
 
 先建立 MaintIE 公开基准：在相同原始 token 标注预算下，比较 Random、Uncertainty、Uncertainty + Diversity。模型通过 BERT/RoBERTa/ModernBERT feasibility pilot 后选定，采样比较中保持一致。主指标为 exact-match entity-level micro-F1，至少五个随机种子。
 
-本目录是 2026-10-10 从零启动的项目。依据用户提供的 proposal 建立；尚未训练模型，也没有性能结果。
+本目录是 2026-10-10 从零启动的项目。依据用户提供的 proposal 建立；已完成三种编码器的可行性试跑，主动学习采样尚未实现。
 
 ## 已完成
 
@@ -18,7 +18,7 @@
 
 328 条记录包含重叠实体。例如 `air filters` 与 `filters` 同时被标注。官方指南 §2.3.6 明确允许 nested entities。普通单层 BIO 无法表示全部原始实体；脚本检测到重叠时只写审计报告，暂不输出 BIO。
 
-已选择 span-based NER 路线：保留全部嵌套实体，通过相同的 span 分类头比较 BERT/RoBERTa/ModernBERT 编码器。模型尚未实现、训练；方案见 `docs/model_plan.md`。
+已选择 span-based NER 路线：保留全部嵌套实体，通过相同的 span 分类头比较 BERT/RoBERTa/ModernBERT 编码器。共用 span 分类头已实现，三种模型均完成训练与 checkpoint 重载检查；设计见 `docs/model_plan.md`。
 
 ## 数据与评估准备已完成
 
@@ -27,7 +27,7 @@
 - 完全一致的大小写归一化 token 序列，以及 token SequenceMatcher 相似度 >=0.9 的文本留在同一集合。此规则只能控制表面相似泄漏，不能证明记录来自不同设备或不同工单，因为源数据缺少这些标识。
 - 验证集仅有 4 个 Property 实体，测试集有 9 个；该类别结果应谨慎解释，不以该类别的单轮 F1 作为独立停止条件。
 - 实体级评分支持嵌套；要求记录索引、起点、终点、类别全部一致才算正确。
-- 9 项测试通过；全数据转换逐条核对原始标注，oracle 自评分为 1.0。这只验证数据和评分管线，不是模型性能。
+- 12 项本地测试通过（其中 3 项需要训练依赖）；全数据转换逐条核对原始标注，oracle 自评分为 1.0。这只验证数据和评分管线，不是模型性能。
 
 ```sh
 python3 scripts/prepare_data.py
@@ -49,11 +49,17 @@ python3 scripts/audit_data.py
 
 `data/raw/` 保留原始数据；`reports/data_audit.json` 包含原始文件 SHA-256 和检查结果。仅在没有重叠或非法实体时，脚本才会生成 `data/processed/` 下的 BIO 数据。
 
-## 下一步：小规模训练试跑
+## 模型试跑结果
+
+事前固定相同数据、共用分类头、seed 42、5 轮预算：BERT 验证集 micro-F1 0.9072，RoBERTa 0.8936，ModernBERT 0.8669。按注册规则，后续工作模型选用 BERT-base-uncased。测试集未用于选型。这是单种子短预算试跑，不能据此断言 BERT 普遍更优。
+
+完整结果：[pilot_results.md](docs/pilot_results.md)。规则：[pilot_protocol.md](docs/pilot_protocol.md)。
+
+## 下一步：主动学习比较
 
 1. 已完成固定数据划分及实体级评分。
-2. 建立独立训练环境，检查原始 token 与 subword 对齐。本机检测到 PyTorch 2.14.0、Apple MPS 可用、CUDA 不可用；尚未验证 transformer 模型在 MPS 上的训练兼容性。
-3. 完成候选模型可行性 pilot；按验证集表现、耗时、稳定性选择基础模型。测试集不参与模型选择或调参。
+2. 建立独立训练环境，检查原始 token 与 subword 对齐。本机检测到 PyTorch 2.14.0、Apple MPS 可用、CUDA 不可用；三种模型均已在 MPS 上完成试跑。
+3. 已完成候选模型 pilot，选定 BERT-base-uncased 为工作编码器。测试集不参与模型选择或调参。
 4. 建立全量训练参照及 Random 曲线，再接入两种主动学习策略。
 
 ## 实验协议中仍需明确

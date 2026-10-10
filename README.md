@@ -4,7 +4,9 @@
 
 A research project comparing random sampling, uncertainty sampling, and uncertainty plus diversity for named entity recognition in maintenance records, under equal annotation token budgets.
 
-**Status:** data preparation and evaluation code are implemented. Model training and active learning are not implemented yet; there are no model performance results.
+**Status:** data preparation, nested-span training, and the three-encoder feasibility pilot are complete. Active-learning sampling is not implemented yet.
+
+The preregistered single-seed, five-epoch pilot selected **BERT-base-uncased** as the working encoder. Best validation micro-F1: BERT 0.9072, RoBERTa 0.8936, ModernBERT 0.8669. These are validation selection scores, not final test results or evidence of general superiority. See the [pilot report](docs/pilot_results.md), [protocol](docs/pilot_protocol.md), and [machine-readable metrics](benchmarks/pilot-v1/comparison.json).
 
 ## Quick start
 
@@ -25,7 +27,7 @@ The download script fetches public MaintIE gold data and its license from a pinn
 
 [MaintIE's gold corpus](https://github.com/nlp-tlp/maintie) contains 1,076 records, 6,119 original tokens, and 3,397 entity annotations. Fine-grained labels map to PhysicalObject, Activity, State, Process, and Property.
 
-There are nested entities in 328 records. Both `air filters` and `filters`, for example, can be annotated in one text. Conversion preserves every gold entity as a span. The audit script withholds flat BIO conversion when overlaps are detected. The planned model uses a pretrained encoder and span classification head; see the [model plan](docs/model_plan.md).
+There are nested entities in 328 records. Both `air filters` and `filters`, for example, can be annotated in one text. Conversion preserves every gold entity as a span. The audit script withholds flat BIO conversion when overlaps are detected. The implemented model uses a pretrained encoder and span classification head; see the [model plan](docs/model_plan.md).
 
 ## Fixed split
 
@@ -53,12 +55,12 @@ Provide one JSON line for every gold record, including empty predictions:
 {"record_index": 5, "entities": [{"start": 1, "end": 3, "type": "PhysicalObject"}, {"start": 2, "end": 3, "type": "PhysicalObject"}]}
 ```
 
-Nine tests cover duplicate grouping, nested-span preservation, exact-match scoring, missing records, malformed boundaries, and repeated predictions. Oracle self-scoring is a pipeline check, not model performance.
+Nine data/scoring tests cover duplicate grouping, nested-span preservation, exact-match scoring, missing records, malformed boundaries, and repeated predictions. Three additional offline training tests check subword pooling, truncation rejection, gradients, and checkpoint restoration; these require the training dependencies. All 12 passed locally. Oracle self-scoring is a pipeline check, not model performance.
 
 ## Experiment plan
 
-1. Implement the span model; validate token alignment, gradient updates, and checkpoint loading.
-2. Pilot BERT-base, RoBERTa-base, and ModernBERT-base; select using validation performance, runtime, and stability.
+1. Completed: shared span model, token alignment, gradient updates, and checkpoint restoration.
+2. Completed: BERT/RoBERTa/ModernBERT pilot; BERT-base-uncased selected by the registered rule.
 3. Fix one model and training protocol; establish full-training-pool and random-sampling curves.
 4. Compare uncertainty and uncertainty plus diversity using shared initial labeled sets, equal budgets, and at least five seeds.
 5. Report learning curves, per-type results, and token budgets needed to approach full-data F1.
@@ -71,8 +73,12 @@ The proposed budget grid is 5/10/20/40/60/100% of training-pool original tokens.
 - `scripts/audit_data.py`: source annotation audit.
 - `scripts/prepare_data.py`: nested spans and grouped splits.
 - `scripts/score_spans.py`: exact-match entity scoring.
-- `tests/`: data and scoring tests.
-- `docs/model_plan.md`: planned model and protocol boundaries.
+- `scripts/run_pilot.py`: encoder pilot with a shared nested-span classification head.
+- `scripts/summarize_pilot.py`: artifact validation and result report.
+- `configs/pilot.json`: registered settings and pinned model revisions.
+- `tests/`: data, scoring, and optional offline training tests.
+- `docs/model_plan.md`: model design and protocol boundaries.
+- `docs/pilot_results.md`: measured pilot results and limitations.
 - `data/processed/split_manifest.json`: versioned split definition.
 
 ## License and attribution
@@ -82,3 +88,15 @@ Project code is MIT licensed; see [LICENSE](LICENSE). MaintIE is a separate upst
 Please cite MaintIE when using the corpus:
 
 Bikaun, T. K., French, T., Stewart, M., Liu, W., and Hodkiewicz, M. (2024). [MaintIE: A Fine-Grained Annotation Schema and Benchmark for Information Extraction from Maintenance Short Texts](https://aclanthology.org/2024.lrec-main.954/). LREC-COLING 2024, 10939–10951.
+
+## Running the training pilot
+
+Use a fresh Python environment and a PyTorch build appropriate for your device. The tested versions are in `requirements-training.txt`. The registered configuration uses Apple MPS; running on another device requires recording a new protocol.
+
+```sh
+python3 -m pip install -r requirements-training.txt
+python3 scripts/run_pilot.py
+python3 scripts/summarize_pilot.py
+```
+
+Run the three candidates in separate processes, keeping all settings fixed. Existing candidate result files are protected from overwriting; use a fresh checkout/run for replication. Large checkpoints, model caches, raw data, and prediction files remain local and are excluded from Git. The report generator records hardware metadata in `runs/pilot/hardware.json`.

@@ -1,6 +1,6 @@
 # Nested span NER implementation plan
 
-Decision date: 2026-10-10. This is a design and data-preparation milestone, not a trained model.
+Decision date: 2026-10-10. This records the initial design. Implementation and the subsequent encoder feasibility pilot are now complete; see [pilot results](pilot_results.md).
 
 ## Task
 
@@ -8,11 +8,11 @@ Predict all annotated spans at the five top-level MaintIE types, including neste
 
 For example, `air filters plugged` can produce `(air filters, PhysicalObject)`, `(filters, PhysicalObject)`, and `(plugged, State)` simultaneously.
 
-## Planned architecture
+## Implemented architecture
 
 Use a pretrained bidirectional encoder with a small span classification head. A span representation combines its first/last word representations, a pooled representation within the span, and a width embedding. Classify each candidate as NONE or one of the five entity types. Keep the head and training protocol identical when comparing the three candidate encoders; change only the encoder/tokenizer.
 
-Enumerate all contiguous spans in each record rather than choosing a maximum span width from held-out gold labels. The current corpus has at most 12 original tokens per record and 22,095 total candidate spans, so full enumeration is feasible in principle. Runtime and device compatibility still require a pilot. Decode every span whose predicted class is not NONE, without a non-overlap suppression rule.
+Enumerate all contiguous spans in each record rather than choosing a maximum span width from held-out gold labels. The current corpus has at most 12 original tokens per record and 22,095 total candidate spans, so full enumeration is feasible in principle. All three candidates subsequently completed the registered MPS pilot; see the result report. Decode every span whose predicted class is not NONE, without a non-overlap suppression rule.
 
 Preserve original tokens and token offsets. Use tokenizer word alignment to pool subwords for each original token. Assert that every token is represented; fail explicitly if inputs are truncated. Special tokens and padding are excluded from span representations and annotation budgets.
 
